@@ -1,0 +1,104 @@
+service: passwordless-otp-cognito-demo
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-lumigo
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: eu-west-1
+
+custom:
+  domain: appsyncmasterclass.com
+  lumigo:
+    token: t_7afe5952d7644bd48a2f5
+
+functions:
+  defineAuthChallenge:
+    handler: functions/define-auth-challenge.handler
+
+  createAuthChallenge:
+    handler: functions/create-auth-challenge.handler
+    environment:
+      SES_FROM_ADDRESS: noreply@${self:custom.domain}
+    iamRoleStatements:
+      - Effect: Allow
+        Action: ses:SendEmail
+        Resource: 
+          - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${self:custom.domain}
+          - !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:configuration-set/*
+
+  verifyAuthChallengeResponse:
+    handler: functions/verify-auth-challenge-response.handler
+
+resources:
+  Resources:    
+    PasswordlessOtpUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        AutoVerifiedAttributes:
+          - email
+        UsernameConfiguration:
+          CaseSensitive: false
+        UsernameAttributes:
+          - email
+        Schema:
+          - AttributeDataType: String
+            Mutable: false
+            Required: true
+            Name: email
+            StringAttributeConstraints: 
+              MinLength: '8'
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireUppercase: true
+            RequireSymbols: true
+        LambdaConfig:
+          DefineAuthChallenge: !GetAtt DefineAuthChallengeLambdaFunction.Arn
+          CreateAuthChallenge: !GetAtt CreateAuthChallengeLambdaFunction.Arn
+          VerifyAuthChallengeResponse: !GetAtt VerifyAuthChallengeResponseLambdaFunction.Arn
+        EmailConfiguration:
+          EmailSendingAccount: DEVELOPER
+          From: Yan Cui <noreply@${self:custom.domain}>
+          SourceArn: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${self:custom.domain}
+
+    WebUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: web
+        UserPoolId: !Ref PasswordlessOtpUserPool
+        ExplicitAuthFlows:
+          - ALLOW_CUSTOM_AUTH
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+        PreventUserExistenceErrors: ENABLED
+
+    UserPoolDefineAuthChallengeLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        Principal: cognito-idp.amazonaws.com
+        FunctionName: !Ref DefineAuthChallengeLambdaFunction
+        SourceArn: !GetAtt PasswordlessOtpUserPool.Arn
+
+    UserPoolCreateAuthChallengeLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        Principal: cognito-idp.amazonaws.com
+        FunctionName: !Ref CreateAuthChallengeLambdaFunction
+        SourceArn: !GetAtt PasswordlessOtpUserPool.Arn
+
+    UserPoolVerifyAuthChallengeResponseLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        Principal: cognito-idp.amazonaws.com
+        FunctionName: !Ref VerifyAuthChallengeResponseLambdaFunction
+        SourceArn: !GetAtt PasswordlessOtpUserPool.Arn

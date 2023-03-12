@@ -1,0 +1,31 @@
+{
+  "name": "passwordless-otp-cognito-demo",
+  "description": "How to implement passwordless login using OTP with Cognito",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "devDependencies": {
+    "serverless": "^3.28.1",
+    "serverless-iam-roles-per-function": "^3.2.0",
+    "serverless-lumigo": "^1.14.3"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theburningmonk/passwordless-otp-cognito-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/theburningmonk/passwordless-otp-cognito-demo/issues"
+  },
+  "homepage": "https://github.com/theburningmonk/passwordless-otp-cognito-demo#readme",
+  "dependencies": {
+    "@lumigo/tracer": "^1.79.4",
+    "chance": "^1.1.11",
+    "lodash": "^4.17.21"
+  }
+}
