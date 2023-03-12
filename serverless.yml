@@ -3,7 +3,6 @@ service: passwordless-otp-cognito-demo
 frameworkVersion: '3'
 
 plugins:
-  - serverless-lumigo
   - serverless-iam-roles-per-function
 
 provider:
@@ -12,9 +11,8 @@ provider:
   region: eu-west-1
 
 custom:
-  domain: appsyncmasterclass.com
-  lumigo:
-    token: t_7afe5952d7644bd48a2f5
+  # replace with your verified SES domain
+  domain: appsyncmasterclass.com 
 
 functions:
   defineAuthChallenge:
