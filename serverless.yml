@@ -15,6 +15,9 @@ custom:
   domain: appsyncmasterclass.com 
 
 functions:
+  preSignUp:
+    handler: functions/pre-sign-up.handler
+
   defineAuthChallenge:
     handler: functions/define-auth-challenge.handler
 
@@ -37,12 +40,20 @@ resources:
     PasswordlessOtpUserPool:
       Type: AWS::Cognito::UserPool
       Properties:
-        AutoVerifiedAttributes:
-          - email
         UsernameConfiguration:
           CaseSensitive: false
         UsernameAttributes:
           - email
+        Policies:
+          # this is only to satisfy Cognito requirements
+          # we won't be using passwords, but we also don't
+          # want weak passwords in the system ;-)
+          PasswordPolicy:
+            MinimumLength: 16
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireUppercase: true
+            RequireSymbols: true
         Schema:
           - AttributeDataType: String
             Mutable: false
@@ -50,21 +61,11 @@ resources:
             Name: email
             StringAttributeConstraints: 
               MinLength: '8'
-        Policies:
-          PasswordPolicy:
-            MinimumLength: 8
-            RequireLowercase: true
-            RequireNumbers: true
-            RequireUppercase: true
-            RequireSymbols: true
         LambdaConfig:
+          PreSignUp: !GetAtt PreSignUpLambdaFunction.Arn
           DefineAuthChallenge: !GetAtt DefineAuthChallengeLambdaFunction.Arn
           CreateAuthChallenge: !GetAtt CreateAuthChallengeLambdaFunction.Arn
           VerifyAuthChallengeResponse: !GetAtt VerifyAuthChallengeResponseLambdaFunction.Arn
-        EmailConfiguration:
-          EmailSendingAccount: DEVELOPER
-          From: Yan Cui <noreply@${self:custom.domain}>
-          SourceArn: !Sub arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${self:custom.domain}
 
     WebUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
@@ -73,9 +74,16 @@ resources:
         UserPoolId: !Ref PasswordlessOtpUserPool
         ExplicitAuthFlows:
           - ALLOW_CUSTOM_AUTH
-          - ALLOW_USER_SRP_AUTH
           - ALLOW_REFRESH_TOKEN_AUTH
         PreventUserExistenceErrors: ENABLED
+
+    UserPoolPreSignUpLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:invokeFunction
+        Principal: cognito-idp.amazonaws.com
+        FunctionName: !Ref PreSignUpLambdaFunction
+        SourceArn: !GetAtt PasswordlessOtpUserPool.Arn
 
     UserPoolDefineAuthChallengeLambdaPermission:
       Type: AWS::Lambda::Permission
