@@ -7,7 +7,9 @@ module.exports.handler = async (event) => {
 
   if (event.request.session &&
       event.request.session.find(attempt => attempt.challengeName !== 'CUSTOM_CHALLENGE')) {
-      // We only accept custom challenges; fail auth
+      // Should never happen, but in case we get anything other
+      // than a custom challenge, then something's wrong and we
+      // should abort
       event.response.issueTokens = false
       event.response.failAuthentication = true
   } else if (attempts >= MAX_ATTEMPTS && lastAttempt.challengeResult === false) {
